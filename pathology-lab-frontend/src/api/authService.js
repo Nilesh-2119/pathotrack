@@ -1,24 +1,22 @@
-import axiosInstance from "./axios";
-import jwtDecode from "jwt-decode";
+// src/api/authService.js
+import api from "./apiClient";
 
-export const login = async (credentials) => {
-  const { data } = await axiosInstance.post("auth/login/", credentials);
-  localStorage.setItem("access", data.access);
-  localStorage.setItem("refresh", data.refresh);
-  return jwtDecode(data.access);
+// Register Lab Admin
+export const registerLab = async (payload) => {
+  return await api.post("/auth/register/", payload);
 };
 
-export const register = async (userData) => {
-  const { data } = await axiosInstance.post("auth/register/", userData);
-  return data;
+// Login user
+export const loginUser = async ({ email, password }) => {
+  // Django expects "username", not "email"
+  const response = await api.post("/auth/login/", {
+    username: email,
+    password,
+  });
+  return response.data;
 };
 
+// Get logged-in user profile
 export const getProfile = async () => {
-  const { data } = await axiosInstance.get("auth/me/");
-  return data;
-};
-
-export const logout = () => {
-  localStorage.removeItem("access");
-  localStorage.removeItem("refresh");
+  return await api.get("/auth/profile/");
 };

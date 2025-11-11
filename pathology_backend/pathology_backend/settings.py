@@ -36,10 +36,12 @@ INSTALLED_APPS = [
     'reports',
     'billing',
     'dashboard',
+    'corsheaders',
 ]
 
 # Middleware
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -129,3 +131,24 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+
+# settings.py
+FRONTEND_URL = "http://localhost:5173"  # or your deployed frontend
+
+DEFAULT_FROM_EMAIL = "no-reply@pathotrack.com"
+
+# ====== Email Settings ======
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"  # or your mail provider
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "kalenilesh2119@gmail.com"
+EMAIL_HOST_PASSWORD = "oeka zhed dkiz isil"  # ⚠️ Not your Gmail password
+DEFAULT_FROM_EMAIL = "PathoTrack <kalenilesh2119@gmail.com>"
+

@@ -8,18 +8,31 @@ export default function Navbar({ onOpenSidebar }) {
     const { theme, toggleTheme } = useContext(ThemeContext);
     const navigate = useNavigate();
 
-    // 🧠 Fetch logged-in user data (from localStorage)
-    const user =
-        JSON.parse(localStorage.getItem("user")) || {
+    // ✅ Safely read user from localStorage (prevents blank screen crash)
+    let user = null;
+    try {
+        const raw = localStorage.getItem("user");
+        user = raw && raw !== "undefined" ? JSON.parse(raw) : null;
+    } catch (e) {
+        console.error("Error parsing stored user:", e);
+        user = null;
+    }
+
+    // ✅ Default fallback if no user found
+    if (!user) {
+        user = {
             doctorName: "Dr. Admin",
             email: "lab@patho.com",
         };
+    }
 
     // 🔐 Logout functionality
     const handleLogout = () => {
         if (window.confirm("Are you sure you want to log out?")) {
             localStorage.removeItem("token");
             localStorage.removeItem("user");
+            localStorage.removeItem("access");
+            localStorage.removeItem("refresh");
             navigate("/login");
         }
     };
@@ -64,10 +77,10 @@ export default function Navbar({ onOpenSidebar }) {
                     <UserCircle className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     <div className="hidden sm:block">
                         <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                            {user.doctorName}
+                            {user.doctorName || user.username || "Lab Admin"}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {user.email}
+                            {user.email || "lab@patho.com"}
                         </div>
                     </div>
                 </div>

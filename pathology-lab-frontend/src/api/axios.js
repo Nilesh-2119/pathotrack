@@ -9,12 +9,24 @@ const axiosInstance = axios.create({
   },
 });
 
-// ✅ Attach token automatically
+// ✅ Define public (unauthenticated) endpoints
+const PUBLIC_ENDPOINTS = [
+  "/auth/login/",
+  "/auth/register/",
+  "/auth/password-reset/",
+];
+
+// ✅ Attach token automatically — but skip public endpoints
 axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const isPublic = PUBLIC_ENDPOINTS.some((url) => config.url.includes(url));
+
+  if (!isPublic) {
+    const token = localStorage.getItem("access");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
+
   return config;
 });
 

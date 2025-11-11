@@ -20,6 +20,8 @@ import Tests from "./pages/Admin/Tests";
 import StaffLogin from "./pages/Staff/StaffLogin";
 import StaffDashboard from "./pages/Staff/Dashboard";
 import StaffPatients from "./pages/Staff/Patients";
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import ResetPassword from "./pages/Auth/ResetPassword";
 
 export default function App() {
   return (
@@ -44,6 +46,11 @@ export default function App() {
           <Route path="/staff/login" element={<StaffLogin />} />
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
           <Route path="/staff/patients" element={<StaffPatients />} />
+
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+
 
           {/* ===== Fallback ===== */}
           <Route path="*" element={<NotFound />} />
