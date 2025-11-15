@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+// src/pages/Staff/StaffLogin.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { UserCheck } from "lucide-react";
+import api from "../../api/apiClient";
 
 export default function StaffLogin() {
     const navigate = useNavigate();
@@ -9,23 +11,53 @@ export default function StaffLogin() {
         password: "",
     });
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    // ✅ Redirect if already logged in
+    useEffect(() => {
+        const token = localStorage.getItem("access");
+        if (token) {
+            navigate("/staff/dashboard");
+        }
+    }, [navigate]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (formData.username.trim() === "" || formData.password.trim() === "") {
+        if (!formData.username.trim() || !formData.password.trim()) {
             setError("Please fill in all fields.");
             return;
         }
 
         setError("");
-        alert("✅ Logged in as Blood Collection Staff (mock)");
-        navigate("/staff/dashboard");
+        setLoading(true);
+
+        try {
+            const res = await api.post("/auth/login/", {
+                username: formData.username,
+                password: formData.password,
+            });
+
+            // ✅ Save tokens to localStorage
+            localStorage.setItem("access", res.data.access);
+            localStorage.setItem("refresh", res.data.refresh);
+
+            alert("✅ Login successful!");
+            navigate("/staff/dashboard");
+        } catch (err) {
+            console.error("❌ Staff login error:", err);
+            const msg =
+                err.response?.data?.detail ||
+                "Invalid credentials. Please try again.";
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -76,9 +108,10 @@ export default function StaffLogin() {
 
                     <button
                         type="submit"
+                        disabled={loading}
                         className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition transform hover:scale-[1.02] active:scale-100 font-medium"
                     >
-                        Login
+                        {loading ? "Logging in..." : "Login"}
                     </button>
                 </form>
 

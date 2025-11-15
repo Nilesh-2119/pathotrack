@@ -5,9 +5,6 @@ import Navbar from "../../components/Navbar/Navbar";
 import StatCard from "../../components/Cards/StatCard";
 import DailyReportsChart from "../../components/Charts/DailyReportsChart";
 import PatientsTable from "../../components/Tables/PatientsTable";
-import AddStaffForm from "../../components/Forms/AddStaffForm";
-import AddTestForm from "../../components/Forms/AddTestForm";
-import AddPatientForm from "../../components/Forms/AddPatientForm";
 import { formatFullDate } from "../../utils/dateFormat";
 import MonthlyReportChart from "../../components/Charts/MonthlyReportChart";
 import {
@@ -82,10 +79,6 @@ const SummaryCard = ({ label, value, color }) => (
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showAddPatient, setShowAddPatient] = useState(false);
-  const [showAddStaff, setShowAddStaff] = useState(false);
-  const [showAddTest, setShowAddTest] = useState(false);
-  const [tests, setTests] = useState([]);
   const [statsData, setStatsData] = useState(null);
   const [patientData, setPatientData] = useState([]);
   const [loading, setLoading] = useState(true);

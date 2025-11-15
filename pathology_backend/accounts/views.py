@@ -1,4 +1,7 @@
 # accounts/views.py
+from django.conf import settings
+from django.core.mail import send_mail
+from rest_framework.views import APIView
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -6,6 +9,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, UserSerializer
 from labs.models import Lab
+from rest_framework.permissions import IsAuthenticated
 
 User = get_user_model()
 
@@ -52,16 +56,15 @@ class RegisterView(generics.CreateAPIView):
 # ✅ 4. Profile View
 class ProfileView(generics.RetrieveAPIView):
     serializer_class = UserSerializer
-    permission_classes = [permissions.AllowAny]
+    # ⬅ only authenticated users allowed
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return self.request.user
 
 
 # ✅ Forgot Password View
-from rest_framework.views import APIView
-from django.core.mail import send_mail
-from django.conf import settings
+
 
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]

@@ -24,7 +24,10 @@ export default function StaffSidebar({ open, onClose }) {
 
     const handleLogout = () => {
         if (window.confirm("Are you sure you want to log out?")) {
-            localStorage.removeItem("staff");
+            // ✅ Remove JWT tokens
+            localStorage.removeItem("access");
+            localStorage.removeItem("refresh");
+
             navigate("/staff/login");
         }
     };
@@ -33,7 +36,9 @@ export default function StaffSidebar({ open, onClose }) {
         <>
             {/* Mobile Overlay */}
             <div
-                className={`fixed inset-0 bg-black/40 z-30 md:hidden transition-opacity ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                className={`fixed inset-0 bg-black/40 z-30 md:hidden transition-opacity ${open
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-0 pointer-events-none"
                     }`}
                 onClick={onClose}
             />
@@ -57,6 +62,7 @@ export default function StaffSidebar({ open, onClose }) {
                 <nav className="p-4 space-y-1">
                     <SideItem to="/staff/dashboard" icon={Home} label="Home" />
                     <SideItem to="/staff/patients" icon={Users} label="Patients" />
+
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 px-3 py-2 w-full text-left text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-gray-800 hover:text-red-600 rounded-md"

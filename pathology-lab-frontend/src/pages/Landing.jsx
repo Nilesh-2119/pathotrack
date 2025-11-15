@@ -1,9 +1,13 @@
 // src/pages/Auth/Landing.jsx
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { FlaskConical, Activity, Users, Lock } from "lucide-react";
 
 export default function Landing() {
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const navigate = useNavigate();
+
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 flex flex-col">
             {/* Navbar */}
@@ -13,12 +17,12 @@ export default function Landing() {
                     PathoTrack
                 </div>
                 <div className="flex items-center gap-4">
-                    <Link
-                        to="/login"
+                    <button
+                        onClick={() => setShowLoginModal(true)}
                         className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600"
                     >
                         Login
-                    </Link>
+                    </button>
                     <Link
                         to="/register"
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
@@ -45,12 +49,12 @@ export default function Landing() {
                         >
                             Get Started — Create Your Lab
                         </Link>
-                        <Link
-                            to="/login"
+                        <button
+                            onClick={() => setShowLoginModal(true)}
                             className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm font-medium"
                         >
                             Login
-                        </Link>
+                        </button>
                     </div>
                 </div>
 
@@ -89,9 +93,7 @@ export default function Landing() {
                         >
                             <f.icon className="w-8 h-8 text-blue-600 mb-3" />
                             <h3 className="text-lg font-semibold mb-1">{f.title}</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {f.desc}
-                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{f.desc}</p>
                         </div>
                     ))}
                 </div>
@@ -101,6 +103,57 @@ export default function Landing() {
             <footer className="py-4 text-center text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">
                 © {new Date().getFullYear()} PathoTrack — Smart Lab Management
             </footer>
+
+            {/* ===== Login Role Selection Modal ===== */}
+            <AnimatePresence>
+                {showLoginModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center"
+                        onClick={() => setShowLoginModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700"
+                        >
+                            <h2 className="text-xl font-semibold mb-4 text-center">
+                                Select Login Type
+                            </h2>
+
+                            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-4">
+                                <button
+                                    onClick={() => navigate("/login")}
+                                    className="flex-1 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md font-medium"
+                                >
+                                    Admin Login
+                                </button>
+
+                                <button
+                                    onClick={() => navigate("/staff/login")}
+                                    className="flex-1 px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md font-medium"
+                                >
+                                    Blood Collection Boy
+                                </button>
+                            </div>
+
+                            <div className="mt-6 text-center">
+                                <button
+                                    onClick={() => setShowLoginModal(false)}
+                                    className="text-gray-500 hover:text-gray-700 text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

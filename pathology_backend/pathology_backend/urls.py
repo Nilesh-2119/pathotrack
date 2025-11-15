@@ -1,24 +1,16 @@
-"""
-URL configuration for pathology_backend project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+# pathology_backend/urls.py
 from django.contrib import admin
 from django.urls import path, include
 
+# import staff views from the accounts app (NOT from project root)
+from accounts.views_staff import StaffListView, AddStaffView
+from accounts.views_staff import StaffListView, AddStaffView, StaffPasswordResetView, StaffDeleteView
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # API app includes
     path('api/auth/', include('accounts.urls')),
     path('api/patients/', include('patients.urls')),
     path('api/tests/', include('tests.urls')),
@@ -26,4 +18,15 @@ urlpatterns = [
     path('api/billing/', include('billing.urls')),
     path('api/dashboard/', include('dashboard.urls')),
     path('api/labs/', include('labs.urls')),
+
+    # Staff endpoints (under /api/)
+    path('api/staff/', StaffListView.as_view(), name='staff-list'),
+    path('api/staff/add/', AddStaffView.as_view(), name='add-staff'),
+
+    path('api/staff/reset-password/', StaffPasswordResetView.as_view(),
+         name='staff-reset-password'),
+
+    path('api/staff/<int:staff_id>/delete/',
+         StaffDeleteView.as_view(), name='delete-staff'),
+
 ]

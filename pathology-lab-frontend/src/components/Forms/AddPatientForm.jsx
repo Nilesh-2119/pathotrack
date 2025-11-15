@@ -1,240 +1,228 @@
 // src/components/Forms/AddPatientForm.jsx
 import React, { useState } from "react";
+import api from "../../api/apiClient";
+import TestSelect from "../TestSelect";
+import { motion } from "framer-motion";
 
-export default function AddPatientForm({ availableTests = [] }) {
-    const [formData, setFormData] = useState({
+export default function AddPatientForm({ onPatientAdded }) {
+    const [form, setForm] = useState({
         name: "",
-        phone: "",
         age: "",
-        referredBy: "",
-        selectedTests: [],
-        totalAmount: 0,
-        amountPaid: "",
-        paymentMode: "",
+        gender: "",
+        phone: "",
+        referred_by: "",
+        sample_date: "",
+        tests: [],
+        concession: "0",
+        paid_amount: "",
     });
+
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState("");
+    const [showSummary, setShowSummary] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
+        setForm((prev) => ({ ...prev, [name]: value }));
+    };
 
-        // Special case: if payment mode is FOC, make amountPaid = 0
-        if (name === "paymentMode" && value === "FOC") {
-            setFormData((prev) => ({
-                ...prev,
-                paymentMode: value,
-                amountPaid: 0,
-            }));
+    const handleTestsChange = (selectedTests) => {
+        setForm((prev) => ({ ...prev, tests: selectedTests }));
+    };
+
+    // Compute summary & unique tube names
+    const summary = (() => {
+        const total = (form.tests || []).reduce(
+            (sum, t) => sum + (Number(t.price) || 0),
+            0
+        );
+        const concession = Number(form.concession) || 0;
+        const paid = Number(form.paid_amount) || 0;
+        const final = total - concession;
+        const pending = final - paid;
+        return {
+            total,
+            concession,
+            paid,
+            final: final < 0 ? 0 : final,
+            pending: pending < 0 ? 0 : pending,
+        };
+    })();
+
+    // unique tubes (names) aggregated from selected tests
+    const usedTubes = (() => {
+        const names = {};
+        (form.tests || []).forEach((t) => {
+            if (t.tubes && t.tubes.length) {
+                t.tubes.forEach((tube) => {
+                    names[tube.name] = (names[tube.name] || 0) + 1;
+                });
+            } else if (t.tube_name) {
+                // backwards compatibility if older field exists
+                names[t.tube_name] = (names[t.tube_name] || 0) + 1;
+            }
+        });
+        // return array of { name, count }
+        return Object.keys(names).map((n) => ({ name: n, count: names[n] }));
+    })();
+
+    const handlePreview = (e) => {
+        e.preventDefault();
+        setMessage("");
+        if (!form.name || !form.age || !form.gender || !form.phone) {
+            setMessage("⚠️ Please fill all mandatory fields.");
             return;
         }
-
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        if (!form.tests.length) {
+            setMessage("⚠️ Please select at least one test.");
+            return;
+        }
+        setShowSummary(true);
     };
 
-    const handleTestToggle = (test) => {
-        setFormData((prev) => {
-            const selected = prev.selectedTests.includes(test.name)
-                ? prev.selectedTests.filter((t) => t !== test.name)
-                : [...prev.selectedTests, test.name];
+    const handleConfirm = async () => {
+        setLoading(true);
+        setMessage("");
 
-            const totalAmount = availableTests
-                .filter((t) => selected.includes(t.name))
-                .reduce((sum, t) => sum + t.price, 0);
+        try {
+            const payload = {
+                full_name: form.name.trim(),
+                age: form.age,
+                gender: form.gender === "M" ? "Male" : form.gender === "F" ? "Female" : form.gender,
+                phone: form.phone,
+                referred_by: form.referred_by,
+                sample_date: form.sample_date || null,
+                // backend PatientSerializer expects "tests" as list of ids (see your serializer)
+                test_ids: form.tests.map((t) => t.id),
+                total_price: summary.total,
+                concession: summary.concession,
+                final_price: summary.final,
+                paid_amount: summary.paid,
+                pending_amount: summary.pending,
+            };
 
-            return { ...prev, selectedTests: selected, totalAmount };
-        });
-    };
+            await api.post("/patients/", payload);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const pending =
-            formData.paymentMode === "FOC"
-                ? 0
-                : formData.totalAmount - (parseFloat(formData.amountPaid) || 0);
+            setMessage("✅ Patient added successfully!");
+            setForm({
+                name: "",
+                age: "",
+                gender: "",
+                phone: "",
+                referred_by: "",
+                sample_date: "",
+                tests: [],
+                concession: "0",
+                paid_amount: "",
+            });
+            setShowSummary(false);
 
-        const newPatient = {
-            ...formData,
-            amountPending: pending,
-            date: new Date().toISOString().split("T")[0],
-            status: pending > 0 ? "Pending" : "Paid",
-            reportGiven: false,
-        };
-
-        alert(`✅ Patient "${formData.name}" added successfully!`);
-        console.log("New Patient:", newPatient);
+            // notify parent so it can refresh counters
+            if (typeof onPatientAdded === "function") onPatientAdded();
+        } catch (err) {
+            console.error("❌ Error adding patient:", err);
+            const backendMsg =
+                err?.response?.data && typeof err.response.data === "object"
+                    ? JSON.stringify(err.response.data)
+                    : err?.response?.data || err.message;
+            setMessage("Error adding patient. " + backendMsg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <form
-            onSubmit={handleSubmit}
-            className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700"
-        >
-            {/* Patient Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="form-label">Full Name</label>
-                    <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                        className="form-input"
-                        placeholder="Patient full name"
-                    />
+        <form onSubmit={handlePreview} className="space-y-4 relative bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            {message && (
+                <div
+                    className={`p-2 rounded-lg text-sm ${message.startsWith("✅")
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                        }`}
+                >
+                    {message}
                 </div>
+            )}
 
-                <div>
-                    <label className="form-label">Phone Number</label>
-                    <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={(e) => {
-                            if (/^\d*$/.test(e.target.value) && e.target.value.length <= 10)
-                                handleChange(e);
-                        }}
-                        required
-                        className="form-input"
-                        placeholder="10-digit phone number"
-                    />
-                </div>
-
-                <div>
-                    <label className="form-label">Age</label>
-                    <input
-                        type="number"
-                        name="age"
-                        value={formData.age}
-                        onChange={handleChange}
-                        required
-                        className="form-input"
-                        placeholder="Age"
-                    />
-                </div>
-
-                {/* 🩺 Referred By Doctor */}
-                <div>
-                    <label className="form-label">Referred By Doctor</label>
-                    <input
-                        type="text"
-                        name="referredBy"
-                        value={formData.referredBy}
-                        onChange={handleChange}
-                        placeholder="Dr. Name or Clinic Name"
-                        className="form-input"
-                    />
-                </div>
+            {/* Patient Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input name="name" placeholder="Patient Name" value={form.name} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" required />
+                <input name="age" placeholder="Age" value={form.age} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" required />
+                <select name="gender" value={form.gender} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" required>
+                    <option value="">Select Gender</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+                <input name="phone" placeholder="Phone Number" value={form.phone} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" required />
+                <input name="referred_by" placeholder="Referred By" value={form.referred_by} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" />
+                <input type="date" name="sample_date" value={form.sample_date} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900" />
             </div>
 
-            {/* Test Selection */}
+            {/* Test multi-select */}
             <div>
-                <label className="form-label">Select Tests</label>
-                {availableTests.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No tests available. Please add tests first.
-                    </p>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
-                        {availableTests.map((test, index) => (
-                            <label
-                                key={index}
-                                className={`flex items-center justify-between border rounded-lg p-3 cursor-pointer transition ${formData.selectedTests.includes(test.name)
-                                        ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500"
-                                        : "bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 hover:border-blue-400"
-                                    }`}
-                            >
-                                <div className="flex flex-col">
-                                    <span className="font-medium text-sm">{test.name}</span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        ₹{test.price} • {test.tube}
-                                    </span>
+                <label className="text-sm font-medium mb-1 block">Select Tests</label>
+                <TestSelect selectedTests={form.tests} onChange={handleTestsChange} />
+                {/* Total Amount Display */}
+                {form.tests.length > 0 && (
+                    <div className="mt-3 p-3 border rounded-lg bg-gray-50 text-gray-700 text-sm">
+                        <div className="flex justify-between mb-2">
+                            <span>Total Test Amount:</span>
+                            <span className="font-semibold text-blue-600">₹{summary.total}</span>
+                        </div>
+
+                        {/* Use Tube list */}
+                        <div className="mt-2">
+                            <div className="text-xs text-gray-500 mb-1">Use Tube:</div>
+                            {usedTubes.length === 0 ? (
+                                <div className="text-sm text-gray-500">—</div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {usedTubes.map((t) => (
+                                        <div key={t.name} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-sm">
+                                            {t.name}{t.count > 1 ? ` ×${t.count}` : ""}
+                                        </div>
+                                    ))}
                                 </div>
-                                <input
-                                    type="checkbox"
-                                    checked={formData.selectedTests.includes(test.name)}
-                                    onChange={() => handleTestToggle(test)}
-                                    className="accent-blue-600 w-4 h-4"
-                                />
-                            </label>
-                        ))}
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Payment Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className="form-label">Total Test Amount</label>
-                    <input
-                        type="text"
-                        value={`₹${formData.totalAmount}`}
-                        readOnly
-                        className="form-input bg-gray-100 dark:bg-gray-900 cursor-not-allowed"
-                    />
-                </div>
-
-                <div>
-                    <label className="form-label">Amount Paid</label>
-                    <input
-                        type="number"
-                        name="amountPaid"
-                        value={formData.amountPaid}
-                        onChange={handleChange}
-                        placeholder="Enter paid amount"
-                        className="form-input"
-                        disabled={formData.paymentMode === "FOC"}
-                    />
-                </div>
-
-                <div>
-                    <label className="form-label">Payment Mode</label>
-                    <select
-                        name="paymentMode"
-                        value={formData.paymentMode}
-                        onChange={handleChange}
-                        className="form-input"
-                    >
-                        <option value="">Select mode</option>
-                        <option value="Cash">Cash</option>
-                        <option value="UPI">UPI</option>
-                        <option value="Card">Card</option>
-                        <option value="FOC">FOC (Free of Cost)</option>
-                    </select>
-                </div>
-
-                {/* Payment Status Display */}
-                <div>
-                    <label className="form-label">Payment Status</label>
-                    <input
-                        type="text"
-                        readOnly
-                        value={
-                            formData.paymentMode === "FOC"
-                                ? "Free of Cost"
-                                : formData.totalAmount -
-                                    (parseFloat(formData.amountPaid) || 0) >
-                                    0
-                                    ? "Pending"
-                                    : "Fully Paid"
-                        }
-                        className={`form-input font-medium ${formData.paymentMode === "FOC"
-                                ? "text-green-600"
-                                : formData.totalAmount -
-                                    (parseFloat(formData.amountPaid) || 0) >
-                                    0
-                                    ? "text-yellow-600"
-                                    : "text-green-600"
-                            }`}
-                    />
-                </div>
+            {/* Payment fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="number" name="concession" placeholder="Concession (₹)" value={form.concession} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" min="0" />
+                <input type="number" name="paid_amount" placeholder="Paid Amount (₹)" value={form.paid_amount} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" min="0" />
             </div>
 
-            {/* Submit */}
-            <button
-                type="submit"
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition transform hover:scale-[1.02] active:scale-100 font-medium"
-            >
-                Save Patient
+            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg mt-3">
+                Add Patient
             </button>
+
+            {/* Summary modal */}
+            {showSummary && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSummary(false)}>
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.25 }} onClick={(e) => e.stopPropagation()} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+                        <h2 className="text-lg font-semibold mb-3">🧾 Bill Summary</h2>
+
+                        <div className="text-sm space-y-2">
+                            <div className="flex justify-between"><span>Patient:</span><span className="font-medium">{form.name}</span></div>
+                            <div className="flex justify-between"><span>Total Tests:</span><span className="font-medium">{form.tests.length}</span></div>
+                            <div className="flex justify-between"><span>Total Test Price:</span><span className="font-medium">₹{summary.total}</span></div>
+                            <div className="flex justify-between"><span>Concession:</span><span className="font-medium text-yellow-600">₹{summary.concession}</span></div>
+                            <div className="flex justify-between"><span>Final Amount:</span><span className="font-medium text-blue-600">₹{summary.final}</span></div>
+                            <div className="flex justify-between"><span>Paid:</span><span className="font-medium text-green-600">₹{summary.paid}</span></div>
+                            <div className="flex justify-between border-t pt-2 mt-2"><span>Pending:</span><span className={`font-bold ${summary.pending > 0 ? "text-red-600" : "text-green-600"}`}>₹{summary.pending}</span></div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-5">
+                            <button type="button" onClick={() => setShowSummary(false)} className="px-4 py-2 bg-gray-200 rounded-lg text-sm">Cancel</button>
+                            <button type="button" onClick={handleConfirm} disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">{loading ? "Saving..." : "Confirm & Save"}</button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </form>
     );
 }

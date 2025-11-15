@@ -1,6 +1,7 @@
 # accounts/urls.py
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+from .views_staff import StaffListView, AddStaffView
 from .views import (
     RegisterView,
     ProfileView,
@@ -25,8 +26,14 @@ urlpatterns = [
     path("password-reset/", ForgotPasswordView.as_view(), name="forgot-password"),
 
     # 🔒 Real Password Reset Flow (via views_password.py)
-    path("password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
-    path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
-    path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path("password-reset/request/", PasswordResetRequestView.as_view(),
+         name="password-reset-request"),
+    path("password-reset/confirm/", PasswordResetConfirmView.as_view(),
+         name="password-reset-confirm"),
+    path("password-reset/confirm/", PasswordResetConfirmView.as_view(),
+         name="password-reset-confirm"),
+
+    path("staff/", StaffListView.as_view(), name="staff-list"),
+    path("staff/add/", AddStaffView.as_view(), name="add-staff"),
 
 ]

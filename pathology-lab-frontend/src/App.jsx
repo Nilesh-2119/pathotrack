@@ -1,6 +1,6 @@
 // src/App.jsx
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 
 // Public Pages
@@ -23,6 +23,9 @@ import StaffPatients from "./pages/Staff/Patients";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
 import ResetPassword from "./pages/Auth/ResetPassword";
 
+// ✅ Import ProtectedRoute
+import ProtectedRoute from "./components/Auth/ProtectedRoute";
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -35,25 +38,73 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<RegisterLab />} />
 
-          {/* ===== Admin Routes ===== */}
-          <Route path="/admin/dashboard" element={<Dashboard />} />
-          <Route path="/admin/patients" element={<Patients />} />
-          <Route path="/admin/staff" element={<Staff />} />
-          <Route path="/admin/settings" element={<Settings />} />
-          <Route path="/admin/tests" element={<Tests />} />
+          {/* ===== Admin Routes (Protected) ===== */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/patients"
+            element={
+              <ProtectedRoute>
+                <Patients />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/staff"
+            element={
+              <ProtectedRoute>
+                <Staff />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/tests"
+            element={
+              <ProtectedRoute>
+                <Tests />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ===== Staff Routes ===== */}
           <Route path="/staff/login" element={<StaffLogin />} />
-          <Route path="/staff/dashboard" element={<StaffDashboard />} />
-          <Route path="/staff/patients" element={<StaffPatients />} />
+          <Route
+            path="/staff/dashboard"
+            element={
+              <ProtectedRoute>
+                <StaffDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/staff/patients"
+            element={
+              <ProtectedRoute>
+                <StaffPatients />
+              </ProtectedRoute>
+            }
+          />
 
+          {/* ===== Password Reset ===== */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-
-
-          {/* ===== Fallback ===== */}
-          <Route path="*" element={<NotFound />} />
+          {/* ===== Default Redirect ===== */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </ThemeProvider>
