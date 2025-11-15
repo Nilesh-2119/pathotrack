@@ -23,6 +23,8 @@ export default function AdminPatients() {
     const [paymentInput, setPaymentInput] = useState("");
 
     const selectedDateStr = formatDateStr(selectedDate);
+    const [filterPending, setFilterPending] = useState("");
+
 
     // load patients
     useEffect(() => {
@@ -60,7 +62,23 @@ export default function AdminPatients() {
                 (p.full_name && p.full_name.toLowerCase().includes(term)) ||
                 (p.phone && p.phone.includes(term));
             const matchDoctor = selectedDoctor ? p.referred_by === selectedDoctor : true;
-            return matchDate && matchSearch && matchDoctor;
+            const matchPendingPayment =
+                filterPending === "pending_payment"
+                    ? Number(p.pending_amount) > 0
+                    : true;
+
+            const matchPendingReport =
+                filterPending === "pending_report"
+                    ? p.status !== "Report Given"
+                    : true;
+
+            return (
+                matchDate &&
+                matchSearch &&
+                matchDoctor &&
+                matchPendingPayment &&
+                matchPendingReport
+            );
         });
     }, [patients, selectedDateStr, searchTerm, selectedDoctor]);
 
@@ -170,6 +188,15 @@ export default function AdminPatients() {
                                         {dr}
                                     </option>
                                 ))}
+                            </select>
+                            <select
+                                value={filterPending}
+                                onChange={(e) => setFilterPending(e.target.value)}
+                                className="px-3 py-2 text-sm rounded-lg border bg-gray-100 dark:bg-gray-800 dark:border-gray-700"
+                            >
+                                <option value="">All Status</option>
+                                <option value="pending_payment">Pending Payment</option>
+                                <option value="pending_report">Pending Report</option>
                             </select>
                         </div>
                     </div>

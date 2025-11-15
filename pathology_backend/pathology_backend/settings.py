@@ -2,17 +2,17 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+import dj_database_url
 
-# Load environment variables
 load_dotenv()
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'fallback-secret-key')
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key')
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 # Installed apps
 INSTALLED_APPS = [
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+    'corsheaders',
 
     # Custom apps
     'accounts',
@@ -36,13 +37,14 @@ INSTALLED_APPS = [
     'reports',
     'billing',
     'dashboard',
-    'corsheaders',
+    'expenses',
 ]
 
 # Middleware
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',                # MUST be at the top
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',           # Added for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -54,12 +56,11 @@ MIDDLEWARE = [
 # URL configuration
 ROOT_URLCONF = 'pathology_backend.urls'
 
-# Templates (required for admin and DRF browsable API)
+# Templates
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # Optional: create a templates folder later
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'templates'],   # optional, safe
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -72,28 +73,24 @@ TEMPLATES = [
     },
 ]
 
-# WSGI application
+# WSGI
 WSGI_APPLICATION = 'pathology_backend.wsgi.application'
 
-# Database (MySQL)
+# =========================
+#      DATABASE (Render)
+# =========================
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('MYSQL_DB'),
-        'USER': os.getenv('MYSQL_USER'),
-        'PASSWORD': os.getenv('MYSQL_PASSWORD'),
-        'HOST': os.getenv('MYSQL_HOST', '127.0.0.1'),
-        'PORT': os.getenv('MYSQL_PORT', '3306'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
-    }
+    "default": dj_database_url.config(
+        default="sqlite:///db.sqlite3",
+        conn_max_age=600,
+        ssl_require=False
+    )
 }
 
-# Custom user model
+# Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
-# REST Framework configuration
+# REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -103,7 +100,7 @@ REST_FRAMEWORK = {
     ),
 }
 
-# JWT settings
+# JWT
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(
         minutes=int(os.getenv('SIMPLE_JWT_ACCESS_TOKEN_LIFETIME_MINUTES', 60))
@@ -115,40 +112,44 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# Static & media files
+# =========================
+#       STATIC FILES
+# =========================
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'        # Render will serve static from here
+STATICFILES_DIRS = []                         # DO NOT USE for Render
 
+# Whitenoise compression + caching
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# =========================
+#       MEDIA FILES
+# =========================
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
+# Default field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Localization settings
+# Localization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+# =========================
+#        CORS SETTINGS
+# =========================
+CORS_ALLOW_ALL_ORIGINS = True   # Safe because frontend + backend are both on Render
+CORS_ALLOW_CREDENTIALS = True
 
-
-# settings.py
-FRONTEND_URL = "http://localhost:5173"  # or your deployed frontend
-
-DEFAULT_FROM_EMAIL = "no-reply@pathotrack.com"
-
-# ====== Email Settings ======
+# =========================
+#        EMAIL SETTINGS
+# =========================
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"  # or your mail provider
+EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "kalenilesh2119@gmail.com"
-EMAIL_HOST_PASSWORD = "oeka zhed dkiz isil"  # ⚠️ Not your Gmail password
-DEFAULT_FROM_EMAIL = "PathoTrack <kalenilesh2119@gmail.com>"
-
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")     # READ FROM ENV ONLY
+DEFAULT_FROM_EMAIL = "PathoTrack <no-reply@pathotrack.com>"

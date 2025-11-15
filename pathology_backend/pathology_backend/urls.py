@@ -29,4 +29,6 @@ urlpatterns = [
     path('api/staff/<int:staff_id>/delete/',
          StaffDeleteView.as_view(), name='delete-staff'),
 
+    path("api/expenses/", include("expenses.urls")),
+
 ]

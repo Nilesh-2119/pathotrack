@@ -65,7 +65,7 @@ export default function Sidebar({ open, onClose }) {
                     <SideItem to="/admin/patients" icon={Users} label="Patients" />
                     <SideItem to="/admin/staff" icon={UserCheck} label="Blood Collection Staff" />
                     <SideItem to="/admin/tests" icon={Beaker} label="Manage Tests" />
-                    <SideItem to="/admin/settings" icon={Settings} label="Settings" />
+                    {/* <SideItem to="/admin/settings" icon={Settings} label="Settings" /> */}
                 </nav>
 
                 {/* Footer / Version */}

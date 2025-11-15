@@ -5,171 +5,433 @@ import Navbar from "../../components/Navbar/Navbar";
 import StatCard from "../../components/Cards/StatCard";
 import DailyReportsChart from "../../components/Charts/DailyReportsChart";
 import PatientsTable from "../../components/Tables/PatientsTable";
-import { formatFullDate } from "../../utils/dateFormat";
 import MonthlyReportChart from "../../components/Charts/MonthlyReportChart";
+import { formatFullDate } from "../../utils/dateFormat";
+
 import {
   Users,
-  AlertTriangle,
   IndianRupee,
   DollarSign,
   ArrowLeft,
   ArrowRight,
+  Plus,
 } from "lucide-react";
+
 import { motion } from "framer-motion";
-import { getDashboardSummary } from "../../api/dashboardService";
-import { getPatients } from "../../api/patientService";
+import api from "../../api/apiClient";
 
-function MonthlyReport({ monthDataSource }) {
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-
-  const filtered = monthDataSource.filter(
-    (p) => new Date(p.date).getMonth() === selectedMonth
-  );
-
-  const dailySummary = Array.from({ length: 31 }, (_, i) => {
-    const day = i + 1;
-    const patients = filtered.filter((p) => new Date(p.date).getDate() === day);
-    const revenue = patients.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
-    return { day, patients: patients.length, revenue };
-  }).filter((d) => d.patients > 0 || d.revenue > 0);
-
-  const totalPatients = filtered.length || 0;
-  const totalRevenue = filtered.reduce((sum, p) => sum + (p.amountPaid || 0), 0);
-  const pending = filtered.reduce((sum, p) => sum + (p.amountPending || 0), 0);
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-      <div className="flex flex-wrap items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">Monthly Summary</h2>
-        <select
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-          className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-3 py-2 rounded-lg text-sm focus:outline-none"
-        >
-          {months.map((m, i) => (
-            <option key={m} value={i}>{m}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <SummaryCard label="Total Patients" value={totalPatients} color="blue" />
-        <SummaryCard label="Total Revenue" value={`₹${totalRevenue}`} color="green" />
-        <SummaryCard label="Pending Amount" value={`₹${pending}`} color="yellow" />
-      </div>
-
-      <MonthlyReportChart data={dailySummary} monthName={months[selectedMonth]} />
-    </div>
-  );
-}
-
-const SummaryCard = ({ label, value, color }) => (
-  <div className={`bg-${color}-50 dark:bg-${color}-900/30 p-4 rounded-lg`}>
-    <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
-    <div className={`text-2xl font-semibold text-${color}-600 dark:text-${color}-400`}>
-      {value}
-    </div>
-  </div>
-);
+// ⏳ Date formatter
+const formatDate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [statsData, setStatsData] = useState(null);
+
   const [patientData, setPatientData] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const formatDate = (d) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  // Expense Modal
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseNote, setExpenseNote] = useState("");
+  const [submittingExpense, setSubmittingExpense] = useState(false);
 
-  useEffect(() => {
-    const fetchBackendData = async () => {
-      try {
-        const [patients, summary] = await Promise.all([
-          getPatients(),
-          getDashboardSummary(),
-        ]);
-        setPatientData(patients);
-        setStatsData(summary);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBackendData();
-  }, []);
-
-  const today = new Date();
-  const todayStr = formatDate(today);
   const selectedDateStr = formatDate(selectedDate);
 
+  // Load data on mount
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  // Load patients & expenses when date changes
+  useEffect(() => {
+    fetchPatients();
+    fetchExpenses();
+  }, [selectedDateStr]);
+
+  // ---------------------------------------
+  // FETCHERS
+  // ---------------------------------------
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [p1, e1] = await Promise.all([
+        api.get("/patients/"),
+        api.get(`/expenses/?date=${selectedDateStr}`),
+      ]);
+
+      setPatientData(p1.data || []);
+      setExpenses(e1.data || []);
+    } catch (err) {
+      console.error("❌ Dashboard load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPatients = async () => {
+    try {
+      const p = await api.get("/patients/");
+      setPatientData(p.data || []);
+    } catch (err) {
+      console.error("❌ Failed loading patients:", err);
+    }
+  };
+
+  const fetchExpenses = async () => {
+    try {
+      const e = await api.get(`/expenses/?date=${selectedDateStr}`);
+      setExpenses(e.data || []);
+    } catch (err) {
+      console.error("❌ Failed loading expenses:", err);
+    }
+  };
+
+  // ---------------------------------------
+  // FILTERED PATIENTS BY DATE
+  // ---------------------------------------
+
   const filteredPatients = useMemo(() => {
-    return patientData.filter((p) => p.date === selectedDateStr);
+    return (patientData || []).filter(
+      (p) => p.sample_date === selectedDateStr
+    );
   }, [patientData, selectedDateStr]);
 
-  const isToday = selectedDateStr === todayStr;
+  // ---------------------------------------
+  // EXPENSE TOTAL
+  // ---------------------------------------
+
+  const totalExpenses = expenses.reduce(
+    (sum, e) => sum + Number(e.amount || 0),
+    0
+  );
+
+  // ---------------------------------------
+  // STAT CALCULATIONS
+  // ---------------------------------------
 
   const stats = {
-    patients: statsData?.patients || 0,
-    pendingReports: statsData?.pending_reports || 0,
-    received: statsData?.revenue_collected || 0,
-    pending: statsData?.amount_pending || 0,
+    patients: filteredPatients.length,
+    received: filteredPatients.reduce(
+      (sum, p) => sum + Number(p.paid_amount || 0),
+      0
+    ),
+    pending: filteredPatients.reduce(
+      (sum, p) => sum + Number(p.pending_amount || 0),
+      0
+    ),
   };
+
+  // 💰 Net earnings = received - expenses
+  const netEarnings = stats.received - totalExpenses;
+
+  // ---------------------------------------
+  // Day switcher
+  // ---------------------------------------
+
+  const handlePrevDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(d);
+  };
+
+  const handleNextDay = () => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d);
+  };
+
+  // ---------------------------------------
+  // ADD EXPENSE
+  // ---------------------------------------
+
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
+
+    if (!expenseAmount || Number(expenseAmount) <= 0) return;
+
+    setSubmittingExpense(true);
+    try {
+      await api.post("/expenses/", {
+        amount: expenseAmount,
+        note: expenseNote,
+        date: selectedDateStr,
+      });
+
+      fetchExpenses();
+      setExpenseAmount("");
+      setExpenseNote("");
+      setShowExpenseModal(false);
+    } catch (err) {
+      console.log("❌ EXPENSE ERROR FULL:", err.response?.data);
+      alert(JSON.stringify(err.response?.data));
+    } finally {
+      setSubmittingExpense(false);
+    }
+  };
+
+  // ---------------------------------------
+  // DELETE EXPENSE
+  // ---------------------------------------
+  const deleteExpense = async (id) => {
+    if (!window.confirm("Delete this expense?")) return;
+
+    try {
+      await api.delete(`/expenses/${id}/`);
+      fetchExpenses();
+    } catch (err) {
+      alert("Failed to delete expense");
+    }
+  };
+
+  // ---------------------------------------
+  // LOADING UI
+  // ---------------------------------------
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen text-gray-500">
-        Fetching latest dashboard data...
+      <div className="flex items-center justify-center h-screen text-gray-500 dark:text-gray-300">
+        Loading dashboard...
       </div>
     );
   }
 
+  // ---------------------------------------
+  // UI STARTS HERE
+  // ---------------------------------------
+
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      {/* Sidebar */}
       <aside className="hidden md:block w-64">
         <Sidebar open={true} />
       </aside>
+
       <div className="md:hidden">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
 
+      {/* MAIN */}
       <div className="flex-1 flex flex-col">
         <Navbar onOpenSidebar={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-            <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-              Reports for {formatFullDate(selectedDate)}
-            </h1>
+        <main className="flex-1 p-3 sm:p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
+
+          {/* ------------------------------------ */}
+          {/* DATE HEADER (RESPONSIVE) */}
+          {/* ------------------------------------ */}
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border dark:border-gray-700">
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handlePrevDay}
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"
+              >
+                <ArrowLeft size={18} />
+              </button>
+
+              <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  Reports for
+                </div>
+                <div className="font-semibold">{formatFullDate(selectedDate)}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="date"
+                value={selectedDateStr}
+                onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                className="px-3 py-2 text-sm rounded-lg border bg-gray-100 dark:bg-gray-700 w-full sm:w-auto"
+              />
+
+              <button
+                onClick={handleNextDay}
+                className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700"
+              >
+                <ArrowRight size={18} />
+              </button>
+
+              <button
+                onClick={() => setShowExpenseModal(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm"
+              >
+                <Plus size={14} /> Add Expense
+              </button>
+            </div>
           </div>
 
-          {/* Stats */}
+          {/* ------------------------------------ */}
+          {/* STAT CARDS (RESPONSIVE) */}
+          {/* ------------------------------------ */}
+
           <motion.div
             key={selectedDateStr}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+            transition={{ duration: 0.35 }}
+            className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4"
           >
-            <StatCard title="Total Patients" value={stats.patients}><Users /></StatCard>
-            <StatCard title="Reports Pending" value={stats.pendingReports}><AlertTriangle /></StatCard>
-            <StatCard title="Amount Received" value={`₹${stats.received}`}><IndianRupee /></StatCard>
-            <StatCard title="Amount Pending" value={`₹${stats.pending}`}><DollarSign /></StatCard>
+            <StatCard title="OPD Patients" value={stats.patients}>
+              <Users />
+            </StatCard>
+
+            <StatCard title="Amount Received" value={`₹${stats.received}`}>
+              <IndianRupee />
+            </StatCard>
+
+            <StatCard title="Amount Pending" value={`₹${stats.pending}`}>
+              <DollarSign />
+            </StatCard>
+
+            <StatCard title="Expenses" value={`₹${totalExpenses}`}>
+              <IndianRupee />
+            </StatCard>
+
+            <StatCard title="Net Total" value={`₹${netEarnings}`}>
+              <IndianRupee />
+            </StatCard>
           </motion.div>
 
-          <DailyReportsChart data={[]} />
+          {/* ------------------------------------ */}
+          {/* DAILY CHART */}
+          {/* ------------------------------------ */}
 
-          <PatientsTable rows={filteredPatients} />
+          {/* <DailyReportsChart
+            data={filteredPatients.map((p, i) => ({
+              day: i + 1,
+              reports: p.status === "Report Given" ? 1 : 0,
+            }))}
+          /> */}
 
-          <MonthlyReport monthDataSource={patientData} />
+          {/* ------------------------------------ */}
+          {/* PATIENTS TABLE */}
+          {/* ------------------------------------ */}
+
+          {/* <PatientsTable
+            rows={filteredPatients.map((p) => ({
+              id: p.id,
+              name: p.full_name,
+              phone: p.phone,
+              amountPaid: Number(p.paid_amount || 0),
+              amountPending: Number(p.pending_amount || 0),
+              staff: p.created_by_name || "—",
+              status: p.status || "Pending",
+            }))}
+          /> */}
+
+          {/* ------------------------------------ */}
+          {/* MONTHLY REPORT */}
+          {/* ------------------------------------ */}
+
+          {/* <MonthlyReportChart
+            data={[]} // You can replace later
+            monthName={selectedDate.toLocaleString("default", { month: "long" })}
+          /> */}
+
+          {/* ------------------------------------ */}
+          {/* EXPENSE LIST */}
+          {/* ------------------------------------ */}
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border dark:border-gray-700">
+            <h2 className="text-lg mb-3 font-semibold">Expenses ({selectedDateStr})</h2>
+
+            {expenses.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No expenses found.</p>
+            ) : (
+              <div className="space-y-3">
+                {expenses.map((e) => (
+                  <div
+                    key={e.id}
+                    className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-3 rounded-lg"
+                  >
+                    <div>
+                      <div className="font-semibold">₹{e.amount}</div>
+                      <div className="text-xs text-gray-500">{e.note || "No note"}</div>
+                    </div>
+
+                    <button
+                      onClick={() => deleteExpense(e.id)}
+                      className="px-3 py-1 text-white bg-red-600 rounded-lg text-xs"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </main>
       </div>
+
+      {/* ------------------------------------ */}
+      {/* ADD EXPENSE MODAL */}
+      {/* ------------------------------------ */}
+
+      {showExpenseModal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-3"
+          onClick={() => setShowExpenseModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-xl p-5 w-full max-w-md shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-3">
+              Add Expense ({selectedDateStr})
+            </h3>
+
+            <form onSubmit={handleAddExpense} className="space-y-3">
+              <div>
+                <label className="text-sm block mb-1">Amount (₹)</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={expenseAmount}
+                  onChange={(e) => setExpenseAmount(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm block mb-1">Note</label>
+                <input
+                  type="text"
+                  value={expenseNote}
+                  onChange={(e) => setExpenseNote(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border dark:bg-gray-900 dark:border-gray-700"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowExpenseModal(false)}
+                  className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={submittingExpense}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg"
+                >
+                  {submittingExpense ? "Saving..." : "Save Expense"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

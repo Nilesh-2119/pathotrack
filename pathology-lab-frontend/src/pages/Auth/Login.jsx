@@ -2,44 +2,53 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FlaskConical } from "lucide-react";
-import { loginUser } from "../../api/authService";
+import api from "../../api/apiClient";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: "", password: "", remember: false });
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({ ...formData, [name]: type === "checkbox" ? checked : value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      setLoading(true);
-      setError("");
-      const data = await loginUser({
-        email: formData.email,
+      // Login request
+      const loginRes = await api.post("/auth/login/", {
+        username: formData.email,
         password: formData.password,
       });
 
-      // Save tokens using consistent keys
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("access", loginRes.data.access);
+      localStorage.setItem("refresh", loginRes.data.refresh);
+
+      // Fetch full user profile (IMPORTANT!)
+      const profileRes = await api.get("/auth/profile/");
+      localStorage.setItem("user", JSON.stringify(profileRes.data));
 
       navigate("/admin/dashboard");
     } catch (err) {
-      const status = err?.response?.status;
-      if (status === 404) {
-        setError("No account found. Please create a lab account first.");
-      } else if (status === 400) {
-        setError("Invalid credentials. Please try again.");
+      console.error("❌ Login Error:", err);
+
+      if (err.response?.status === 400) {
+        setError("Invalid credentials.");
+      } else if (err.response?.status === 404) {
+        setError("No account found.");
       } else {
-        setError("Login failed. Please try again.");
+        setError("Something went wrong.");
       }
     } finally {
       setLoading(false);
@@ -80,16 +89,7 @@ export default function Login() {
           </div>
 
           <div className="form-field">
-            <label className="form-label flex justify-between items-center">
-              <span>Password</span>
-              {/* ✅ Added "Forgot Password" link */}
-              <Link
-                to="/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
-              >
-                Forgot Password?
-              </Link>
-            </label>
+            <label className="form-label">Password</label>
             <input
               type="password"
               name="password"
@@ -104,7 +104,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition transform hover:scale-[1.02] active:scale-100 font-medium"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md transition transform hover:scale-[1.02]"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
