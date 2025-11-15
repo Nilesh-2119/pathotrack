@@ -58,13 +58,7 @@ export default function Landing() {
                     </div>
                 </div>
 
-                <div className="flex-1 flex justify-center md:justify-end">
-                    <img
-                        src="https://cdn-icons-png.flaticon.com/512/9987/9987815.png"
-                        alt="Lab illustration"
-                        className="w-72 md:w-96 drop-shadow-lg"
-                    />
-                </div>
+                
             </section>
 
             {/* Features */}
