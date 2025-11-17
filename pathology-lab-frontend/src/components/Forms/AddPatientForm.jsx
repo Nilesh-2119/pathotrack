@@ -5,13 +5,14 @@ import TestSelect from "../TestSelect";
 import { motion } from "framer-motion";
 
 export default function AddPatientForm({ onPatientAdded }) {
+    const today = new Date().toISOString().split("T")[0];
     const [form, setForm] = useState({
         name: "",
         age: "",
         gender: "",
         phone: "",
         referred_by: "",
-        sample_date: "",
+        sample_date: today,
         tests: [],
         concession: "0",
         paid_amount: "",
