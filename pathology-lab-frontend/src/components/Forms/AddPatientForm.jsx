@@ -156,7 +156,7 @@ export default function AddPatientForm({ onPatientAdded }) {
                 </select>
                 <input name="phone" placeholder="Phone Number" value={form.phone} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" required />
                 <input name="referred_by" placeholder="Referred By" value={form.referred_by} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900 dark:border-gray-600" />
-                <input type="date" name="sample_date" value={form.sample_date} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900" />
+                <input type="date" name="sample_date" value={form.sample_date} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-900" required/>
             </div>
 
             {/* Test multi-select */}
