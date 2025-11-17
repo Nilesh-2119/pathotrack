@@ -95,7 +95,7 @@ export default function Landing() {
 
             {/* Footer */}
             <footer className="py-4 text-center text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800">
-                © {new Date().getFullYear()} PathoTrack — Smart Lab Management
+                © {new Date().getFullYear()} PathoTrack — Developed by Nilesh Kale
             </footer>
 
             {/* ===== Login Role Selection Modal ===== */}
