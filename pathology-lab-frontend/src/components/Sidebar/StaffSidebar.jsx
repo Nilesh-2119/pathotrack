@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, Users, LogOut } from "lucide-react";
+import { Home, Users, LogOut, Wallet } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 function SideItem({ to, icon: Icon, label }) {
@@ -62,6 +62,7 @@ export default function StaffSidebar({ open, onClose }) {
                 <nav className="p-4 space-y-1">
                     <SideItem to="/staff/dashboard" icon={Home} label="Home" />
                     <SideItem to="/staff/patients" icon={Users} label="Patients" />
+                    <SideItem to="/staff/collecteddashboard" icon={Wallet} label="Dashboard" />
 
                     <button
                         onClick={handleLogout}
