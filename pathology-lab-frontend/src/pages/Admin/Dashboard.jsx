@@ -58,21 +58,26 @@ export default function Dashboard() {
   // ---------------------------------------
 
   const fetchAll = async () => {
-    setLoading(true);
-    try {
-      const [p1, e1] = await Promise.all([
-        api.get("/patients/"),
-        api.get(`/expenses/?date=${selectedDateStr}`),
-      ]);
+  setLoading(true);
+  try {
+    const [p1, e1] = await Promise.all([
+      api.get("/patients/"),
+      api.get("/expenses/", { params: { date: selectedDateStr } }),
+    ]);
 
-      setPatientData(p1.data || []);
-      setExpenses(e1.data || []);
-    } catch (err) {
-      console.error("❌ Dashboard load error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setPatientData(p1.data || []);
+
+    // client-side fallback: keep only items with exact date match
+    const rawExpenses = Array.isArray(e1.data) ? e1.data : [];
+    const filtered = rawExpenses.filter((it) => it.date === selectedDateStr);
+    setExpenses(filtered);
+  } catch (err) {
+    console.error("❌ Dashboard load error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const fetchPatients = async () => {
     try {
@@ -83,14 +88,17 @@ export default function Dashboard() {
     }
   };
 
-  const fetchExpenses = async () => {
-    try {
-      const e = await api.get(`/expenses/?date=${selectedDateStr}`);
-      setExpenses(e.data || []);
-    } catch (err) {
-      console.error("❌ Failed loading expenses:", err);
-    }
-  };
+ const fetchExpenses = async () => {
+  try {
+    const e = await api.get("/expenses/", { params: { date: selectedDateStr } });
+    const rawExpenses = Array.isArray(e.data) ? e.data : [];
+    // fallback filter to ensure only exact-date entries are shown
+    setExpenses(rawExpenses.filter((it) => it.date === selectedDateStr));
+  } catch (err) {
+    console.error("❌ Failed loading expenses:", err);
+  }
+};
+
 
   // ---------------------------------------
   // FILTERED PATIENTS BY DATE
@@ -354,7 +362,13 @@ export default function Dashboard() {
                   >
                     <div>
                       <div className="font-semibold">₹{e.amount}</div>
-                      <div className="text-xs text-gray-500">{e.note || "No note"}</div>
+                      <div className="text-xs text-gray-500">
+                        {e.note || "No note"}{" "}
+                        <span className="mx-1">•</span>{" "}
+                        <span className="font-medium">{e.created_by_name || "Unknown"}</span>{" "}
+                        <span className="text-gray-400">on</span>{" "}
+                        <span>{e.date || selectedDateStr}</span>
+                      </div>
                     </div>
 
                     <button
