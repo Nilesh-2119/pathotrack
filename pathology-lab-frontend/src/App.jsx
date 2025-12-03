@@ -26,6 +26,8 @@ import ResetPassword from "./pages/Auth/ResetPassword";
 // ✅ Import ProtectedRoute
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 
+import CollectorDashboard from "./pages/Staff/CollectorDashboard";
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -105,6 +107,7 @@ export default function App() {
 
           {/* ===== Default Redirect ===== */}
           <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="/staff/collecteddashboard" element={<CollectorDashboard />} />
         </Routes>
       </Router>
     </ThemeProvider>
