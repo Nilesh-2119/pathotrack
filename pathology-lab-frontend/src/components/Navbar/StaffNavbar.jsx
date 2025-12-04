@@ -16,10 +16,10 @@ export default function StaffNavbar({ onOpenSidebar, patientCount }) {
                 <Menu className="w-5 h-5" />
             </button>
 
-            <div className="flex-1 text-center text-sm font-medium">
+            {/* <div className="flex-1 text-center text-sm font-medium">
                 Today’s Patients:{" "}
                 <span className="text-blue-600 font-semibold">{patientCount}</span>
-            </div>
+            </div> */}
 
             <div className="flex items-center gap-4">
                 <button
